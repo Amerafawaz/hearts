@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Love You</title>
+<style>
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #000;
+  }
+  canvas { position: fixed; inset: 0; display: block; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<canvas id="c"></canvas>
+<script>
+  const TEXT = "Love You";                        // غيريها لأي كلمة أو اسم
+  const COLORS = ["#c2185b", "#d6336c", "#e8467f", "#f06292", "#f78fb3"];
+  const COUNT = 420;                              // عدد الكلمات
+  const SPEED = 0.5;                              // سرعة مشي الكلمات (أقل = أبطأ)
+  const ROTATE = 0;                               // 0 = القلب ثابت بدون دوران
+ 
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+  let W, H;
+  const bg = document.getElementById("bg");
+  const bctx = bg.getContext("2d");
+  let stars = [];
+  function resize() {
+    W = canvas.width = bg.width = window.innerWidth;
+    H = canvas.height = bg.height = window.innerHeight;
+    stars = [];
+    const n = Math.floor((W * H) / 1200);          // عدد النجوم
+    for (let i = 0; i < n; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 0.7 + 0.15,
+        phase: Math.random() * Math.PI * 2,
+        tw: 0.03 + Math.random() * 0.08,
+        spark: Math.random() < 0.12,
+        tint: Math.random() < 0.2 ? "180,200,255" : "255,255,255"
+      });
+    }
+  }
+  window.addEventListener("resize", resize);
+  resize();
+ 
+  function heart(t) {
+    return {
+      x: 16 * Math.pow(Math.sin(t), 3),
+      y: 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t) + 2.5
+    };
+  }
+ 
+  // كل كلمة لها مكان على مسار القلب، وطبقة (قريبة من الحافة أو داخل القلب)
+  const words = [];
+  for (let i = 0; i < COUNT; i++) {
+    const edge = Math.random() < 0.7;             // أغلبها على الحافة عشان الشكل يبان
+    words.push({
+      t: Math.random() * Math.PI * 2,
+      speed: (0.004 + Math.random() * 0.004) * SPEED,
+      r: edge ? 0.92 + Math.random() * 0.12 : 0.25 + Math.random() * 0.65,
+      z: (Math.random() - 0.5) * 14,
+      size: 8 + Math.random() * 7,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    });
+  }
+ 
+  function drawSpace() {
+    bctx.clearRect(0, 0, W, H);
+    for (const st of stars) {
+      st.phase += st.tw;
+      // لمعان حاد: يختفي تقريباً ثم يلمع فجأة
+      const a = Math.pow(Math.abs(Math.sin(st.phase)), 6);
+      if (a < 0.03) continue;
+      bctx.shadowBlur = 6;
+      bctx.shadowColor = `rgba(${st.tint},${a})`;
+      bctx.fillStyle = `rgba(${st.tint},${a})`;
+      bctx.beginPath();
+      bctx.arc(st.x, st.y, st.r + a * 0.6, 0, Math.PI * 2);
+      bctx.fill();
+      if (st.spark && a > 0.25) {                  // شكل نجمة بأربع أطراف
+        const L = 3 + a * 6;
+        bctx.strokeStyle = `rgba(${st.tint},${a * 0.8})`;
+        bctx.lineWidth = 0.6;
+        bctx.beginPath();
+        bctx.moveTo(st.x - L, st.y); bctx.lineTo(st.x + L, st.y);
+        bctx.moveTo(st.x, st.y - L); bctx.lineTo(st.x, st.y + L);
+        bctx.stroke();
+      }
+    }
+    bctx.shadowBlur = 0;
+  }
+ 
+  let frame = 0;
+  function animate() {
+    frame++;
+    const angle = frame * 0.012 * ROTATE;
+    const pulse = 1;                              // بدون نبض
+    const scale = (Math.min(W, H) / 40) * pulse;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+ 
+    // يخلي أثر خفيف ورا الكلمات المتحركة
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "source-over";
+ 
+    drawSpace();
+ 
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+ 
+    const drawn = [];
+    for (const w of words) {
+      w.t += w.speed;                             // الكلمة تمشي على القلب
+      const p = heart(w.t);
+      const x = p.x * w.r, y = p.y * w.r;
+ 
+      // دوران 3D حول المحور العمودي
+      const xr = x * cos + w.z * sin;
+      const zr = -x * sin + w.z * cos;
+      const depth = 1 + zr / 45;                  // القريب أكبر والبعيد أصغر
+ 
+      drawn.push({
+        px: W / 2 + xr * scale,
+        py: H / 2 - y * scale,
+        size: w.size * depth,
+        alpha: Math.max(0.2, Math.min(1, 0.55 + zr / 25)),
+        color: w.color,
+        depth
+      });
+    }
+ 
+    drawn.sort((a, b) => a.depth - b.depth);      // البعيد يترسم أول
+    for (const d of drawn) {
+      ctx.globalAlpha = d.alpha;
+      ctx.font = `bold ${d.size}px Arial`;
+      ctx.fillStyle = d.color;
+      ctx.shadowColor = d.color;
+      ctx.shadowBlur = 10;
+      ctx.fillText(TEXT, d.px, d.py);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>
+ 

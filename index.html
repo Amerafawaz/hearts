@@ -1,53 +1,111 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Love Heart</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>💙</title>
 <style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-    overflow:hidden;
-    background:#000;
-}
-
-canvas{
-    display:block;
-}
-
-#title{
-    position:absolute;
-    top:20px;
-    width:100%;
-    text-align:center;
-    color:white;
-    font-size:26px;
-    font-family:Arial;
-    letter-spacing:3px;
-    text-shadow:0 0 20px #00bfff;
-}
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { position: fixed; inset: 0; display: block; }
+ 
+  .center {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 28px;
+    font-family: Arial, sans-serif;
+    transition: opacity 0.9s ease;
+  }
+  .title {
+    color: #f78fb3; font-size: 22px; letter-spacing: 1px;
+    text-shadow: 0 0 10px #d6336c;
+  }
+  .heart-btn {
+    width: 120px; height: 120px; border: none; background: none;
+    cursor: pointer; padding: 0;
+    animation: float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 14px #d6336c);
+    transition: transform 0.3s ease, filter 0.3s ease;
+  }
+  .heart-btn:hover { transform: scale(1.12); filter: drop-shadow(0 0 26px #f06292); }
+  .heart-btn svg { width: 100%; height: 100%; }
+  .hint { color: #e8467f; font-size: 15px; opacity: 0.8; }
+  @keyframes float { 0%,100% { translate: 0 0; } 50% { translate: 0 -10px; } }
+ 
+  body.leaving .center { opacity: 0; }
 </style>
 </head>
-
 <body>
-
-<div id="title">❤️ LOVE YOU ❤️</div>
-
-<!-- أضيفي ملف موسيقى بنفس المجلد -->
-<audio autoplay loop>
-    <source src="music.mp3" type="audio/mpeg">
-</audio>
-
-<canvas id="canvas"></canvas>
-
+<canvas id="bg"></canvas>
+ 
+<div class="center" id="center">
+  <div class="title">I have something for you</div>                 <!-- غيري الكلام هنا -->
+  <button class="heart-btn" id="btn" aria-label="open">
+    <svg viewBox="0 0 32 29">
+      <path fill="#d6336c" d="M23.6 0c-3.4 0-6.4 2.1-7.6 5.1C14.8 2.1 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.7 16 20.6 16 20.6s16-10.9 16-20.6C32 3.8 28.2 0 23.6 0z"/>
+    </svg>
+  </button>
+  <div class="hint">Tap the heart</div>           <!-- وهنا -->
+</div>
+ 
 <script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-function
+  const NEXT_PAGE = "heart.html";                  // اسم صفحة القلب
+ 
+  // ---- النجوم (نفس خلفية صفحة القلب) ----
+  const bg = document.getElementById("bg");
+  const bctx = bg.getContext("2d");
+  let W, H, stars = [];
+  function resize() {
+    W = bg.width = window.innerWidth;
+    H = bg.height = window.innerHeight;
+    stars = [];
+    const n = Math.floor((W * H) / 1200);
+    for (let i = 0; i < n; i++) {
+      stars.push({
+        x: Math.random() * W, y: Math.random() * H,
+        r: Math.random() * 0.7 + 0.15,
+        phase: Math.random() * Math.PI * 2,
+        tw: 0.03 + Math.random() * 0.08,
+        spark: Math.random() < 0.12,
+        tint: Math.random() < 0.2 ? "180,200,255" : "255,255,255"
+      });
+    }
+  }
+  window.addEventListener("resize", resize);
+  resize();
+ 
+  function draw() {
+    bctx.clearRect(0, 0, W, H);
+    for (const st of stars) {
+      st.phase += st.tw;
+      const a = Math.pow(Math.abs(Math.sin(st.phase)), 6);
+      if (a < 0.03) continue;
+      bctx.shadowBlur = 6;
+      bctx.shadowColor = `rgba(${st.tint},${a})`;
+      bctx.fillStyle = `rgba(${st.tint},${a})`;
+      bctx.beginPath();
+      bctx.arc(st.x, st.y, st.r + a * 0.6, 0, Math.PI * 2);
+      bctx.fill();
+      if (st.spark && a > 0.25) {
+        const L = 3 + a * 6;
+        bctx.strokeStyle = `rgba(${st.tint},${a * 0.8})`;
+        bctx.lineWidth = 0.6;
+        bctx.beginPath();
+        bctx.moveTo(st.x - L, st.y); bctx.lineTo(st.x + L, st.y);
+        bctx.moveTo(st.x, st.y - L); bctx.lineTo(st.x, st.y + L);
+        bctx.stroke();
+      }
+    }
+    bctx.shadowBlur = 0;
+    requestAnimationFrame(draw);
+  }
+  draw();
+ 
+  // ---- الضغط على القلب يودي لصفحة القلب ----
+  document.getElementById("btn").addEventListener("click", () => {
+    document.body.classList.add("leaving");
+    setTimeout(() => { window.location.href = NEXT_PAGE; }, 900);
+  });
+</script>
+</body>
+</html>
+ 
