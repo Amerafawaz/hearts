@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heart</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #14040b; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+ 
+<script>
+// ====== غيّري الإعدادات من هنا ======
+const WORDS = ["I love you"];   // الكلمات اللي تتكرر (تقدرين تحطين أكثر من جملة)
+const COUNT = 340;              // عدد الكلمات
+const SPEED = 0.2;              // سرعة مشي الكلام (كل ما زاد صار أسرع)
+const COLORS = ["#ff4d6d", "#ff758f", "#ff8fa3", "#ffb3c1", "#c9184a"];
+// ====================================
+ 
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+let W, H, dpr, unit;
+ 
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  unit = Math.min(W, H) / 40;
+}
+window.addEventListener("resize", resize);
+resize();
+ 
+// نقطة على القلب عند الزاوية t، مصغّرة بمقدار s
+function heart(t, s) {
+  const x = 16 * Math.pow(Math.sin(t), 3);
+  const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+  return { x: x * s, y: -y * s };
+}
+ 
+const parts = [];
+for (let i = 0; i < COUNT; i++) {
+  // أغلب الكلمات على الإطار الخارجي، والباقي طبقات داخلية
+  const s = Math.random() < 0.5 ? 0.9 + Math.random() * 0.1
+                                : 0.2 + Math.random() * 0.68;
+  parts.push({
+    s,
+    angle: Math.random() * Math.PI * 2,
+    speed: SPEED * (0.5 + s * 0.8),   // الطبقات الداخلية أبطأ شوي
+    x: Math.random() * W,
+    y: Math.random() * H,
+    text: WORDS[i % WORDS.length],
+    size: 0.7 + Math.random() * 0.8,
+    color: COLORS[(Math.random() * COLORS.length) | 0],
+    phase: Math.random() * Math.PI * 2,
+    delay: Math.random() * 1.0,
+    ease: 0.04 + Math.random() * 0.05
+  });
+}
+ 
+let t0 = performance.now();
+canvas.addEventListener("click", () => {
+  t0 = performance.now();
+  parts.forEach(p => {
+    p.x = Math.random() * W;
+    p.y = Math.random() * H;
+    p.delay = Math.random() * 1.0;
+  });
+});
+ 
+function frame(now) {
+  const t = (now - t0) / 1000;
+  ctx.clearRect(0, 0, W, H);
+ 
+  const beat = 1 + 0.05 * Math.pow(Math.max(0, Math.sin(t * 3.2)), 6);
+ 
+  const g = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, unit * 22);
+  g.addColorStop(0, "rgba(255, 60, 100, 0.18)");
+  g.addColorStop(1, "rgba(255, 60, 100, 0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+ 
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+ 
+  for (const p of parts) {
+    // الكلمة تمشي على القلب باستمرار
+    const pt = heart(p.angle + t * p.speed, p.s);
+    const tx = W / 2 + pt.x * unit * beat;
+    const ty = H / 2 + pt.y * unit * beat;
+ 
+    if (t > p.delay) {
+      p.x += (tx - p.x) * p.ease;
+      p.y += (ty - p.y) * p.ease;
+    }
+ 
+    ctx.font = `600 ${unit * 0.9 * p.size}px "Segoe UI", Tahoma, Arial, sans-serif`;
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(p.text, p.x, p.y);
+  }
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
+ 
