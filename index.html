@@ -1,20 +1,27 @@
+
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>💗🌸</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>💗</title>
+
 <style>
+  :root { color-scheme: dark; }
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   canvas { position: fixed; inset: 0; display: block; }
+  #heartCanvas { opacity: 0; transition: opacity 1.2s ease; }
+  #heartCanvas.show { opacity: 1; }
 
   .center {
     position: fixed; inset: 0;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 28px;
-    font-family: Arial, sans-serif;
+    font-family: Arial, sans-serif; text-align: center; padding: 0 20px;
     transition: opacity 0.9s ease;
   }
+  .center.hide { opacity: 0; pointer-events: none; }
   .title {
     color: #f78fb3; font-size: 22px; letter-spacing: 1px;
     text-shadow: 0 0 10px #d6336c;
@@ -26,42 +33,81 @@
     filter: drop-shadow(0 0 14px #d6336c);
     transition: transform 0.3s ease, filter 0.3s ease;
   }
-  .heart-btn:hover { transform: scale(1.12); filter: drop-shadow(0 0 26px #f06292); }
+  .heart-btn:hover {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 26px #f06292);
+  }
   .heart-btn svg { width: 100%; height: 100%; }
   .hint { color: #e8467f; font-size: 15px; opacity: 0.8; }
-  @keyframes float { 0%,100% { translate: 0 0; } 50% { translate: 0 -10px; } }
 
-  body.leaving .center { opacity: 0; }
+  #controls {
+    position: fixed; top: 16px; right: 16px; z-index: 5;
+    display: flex; gap: 10px;
+    opacity: 0; pointer-events: none; transition: opacity 1s ease;
+  }
+  #controls.show { opacity: 1; pointer-events: auto; }
+  #controls button {
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid #d6336c; background: rgba(0,0,0,0.4);
+    color: #f78fb3; font-size: 17px; cursor: pointer;
+    box-shadow: 0 0 10px rgba(214, 51, 108, 0.5);
+  }
+
+  @keyframes float {
+    0%,100% { translate: 0 0; }
+    50% { translate: 0 -10px; }
+  }
 </style>
 </head>
+
 <body>
+
 <canvas id="bg"></canvas>
+<canvas id="heartCanvas"></canvas>
+
+<div id="controls">
+  <button id="mute" aria-label="Sound">♪</button>
+</div>
 
 <div class="center" id="center">
-  <div class="title">I have something for you</div>                 <!-- غيري الكلام هنا -->
-  <button class="heart-btn" id="btn" aria-label="open">
+  <div class="title">I have something for you</div>
+
+  <button class="heart-btn" id="btn" aria-label="Open">
     <svg viewBox="0 0 32 29">
-      <path fill="#d6336c" d="M23.6 0c-3.4 0-6.4 2.1-7.6 5.1C14.8 2.1 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.7 16 20.6 16 20.6s16-10.9 16-20.6C32 3.8 28.2 0 23.6 0z"/>
+      <path fill="#d6336c"
+      d="M23.6 0c-3.4 0-6.4 2.1-7.6 5.1C14.8 2.1 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.7 16 20.6 16 20.6s16-10.9 16-20.6C32 3.8 28.2 0 23.6 0z"/>
     </svg>
   </button>
-  <div class="hint">Tap the heart</div>           <!-- وهنا -->
+
+  <div class="hint">Tap the heart</div>
 </div>
 
 <script>
-  const NEXT_PAGE = "heart.html";                  // اسم صفحة القلب
+  const TEXT = "Love You";
+  const COLORS = ["#c2185b", "#d6336c", "#e8467f", "#f06292", "#f78fb3"];
+  const COUNT = 420;
+  const SPEED = 0.5;
 
-  // ---- النجوم (نفس خلفية صفحة القلب) ----
   const bg = document.getElementById("bg");
   const bctx = bg.getContext("2d");
+
+  const hc = document.getElementById("heartCanvas");
+  const ctx = hc.getContext("2d");
+
   let W, H, stars = [];
+
   function resize() {
-    W = bg.width = window.innerWidth;
-    H = bg.height = window.innerHeight;
+    W = bg.width = hc.width = window.innerWidth;
+    H = bg.height = hc.height = window.innerHeight;
+
     stars = [];
+
     const n = Math.floor((W * H) / 1200);
+
     for (let i = 0; i < n; i++) {
       stars.push({
-        x: Math.random() * W, y: Math.random() * H,
+        x: Math.random() * W,
+        y: Math.random() * H,
         r: Math.random() * 0.7 + 0.15,
         phase: Math.random() * Math.PI * 2,
         tw: 0.03 + Math.random() * 0.08,
@@ -70,41 +116,420 @@
       });
     }
   }
+
   window.addEventListener("resize", resize);
   resize();
 
-  function draw() {
+  function drawSpace() {
     bctx.clearRect(0, 0, W, H);
+
     for (const st of stars) {
       st.phase += st.tw;
+
       const a = Math.pow(Math.abs(Math.sin(st.phase)), 6);
+
       if (a < 0.03) continue;
+
       bctx.shadowBlur = 6;
       bctx.shadowColor = `rgba(${st.tint},${a})`;
       bctx.fillStyle = `rgba(${st.tint},${a})`;
+
       bctx.beginPath();
       bctx.arc(st.x, st.y, st.r + a * 0.6, 0, Math.PI * 2);
       bctx.fill();
+
       if (st.spark && a > 0.25) {
         const L = 3 + a * 6;
+
         bctx.strokeStyle = `rgba(${st.tint},${a * 0.8})`;
         bctx.lineWidth = 0.6;
+
         bctx.beginPath();
-        bctx.moveTo(st.x - L, st.y); bctx.lineTo(st.x + L, st.y);
-        bctx.moveTo(st.x, st.y - L); bctx.lineTo(st.x, st.y + L);
+        bctx.moveTo(st.x - L, st.y);
+        bctx.lineTo(st.x + L, st.y);
+        bctx.moveTo(st.x, st.y - L);
+        bctx.lineTo(st.x, st.y + L);
         bctx.stroke();
       }
     }
-    bctx.shadowBlur = 0;
-    requestAnimationFrame(draw);
-  }
-  draw();
 
-  // ---- الضغط على القلب يودي لصفحة القلب ----
-  document.getElementById("btn").addEventListener("click", () => {
-    document.body.classList.add("leaving");
-    setTimeout(() => { window.location.href = NEXT_PAGE; }, 900);
+    bctx.shadowBlur = 0;
+  }
+
+  function heart(t) {
+    return {
+      x: 16 * Math.pow(Math.sin(t), 3),
+      y: 13 * Math.cos(t)
+        - 5 * Math.cos(2 * t)
+        - 2 * Math.cos(3 * t)
+        - Math.cos(4 * t) + 2.5
+    };
+  }
+
+  const words = [];
+
+  for (let i = 0; i < COUNT; i++) {
+    const edge = Math.random() < 0.7;
+
+    words.push({
+      t: Math.random() * Math.PI * 2,
+      speed: (0.004 + Math.random() * 0.004) * SPEED,
+      r: edge ? 0.92 + Math.random() * 0.12 : 0.25 + Math.random() * 0.65,
+      z: (Math.random() - 0.5) * 14,
+      size: 8 + Math.random() * 7,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    });
+  }
+
+  let started = false;
+
+  function drawHeart() {
+    const scale = Math.min(W, H) / 40;
+
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.globalCompositeOperation = "source-over";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const drawn = [];
+
+    for (const w of words) {
+      if (started) w.t += w.speed;
+
+      const p = heart(w.t);
+      const zr = w.z;
+
+      drawn.push({
+        px: W / 2 + p.x * w.r * scale,
+        py: H / 2 - p.y * w.r * scale,
+        size: w.size * (1 + zr / 45),
+        alpha: Math.max(0.2, Math.min(1, 0.55 + zr / 25)),
+        color: w.color,
+        depth: zr
+      });
+    }
+
+    drawn.sort((a, b) => a.depth - b.depth);
+
+    for (const d of drawn) {
+      ctx.globalAlpha = d.alpha;
+      ctx.font = `bold ${d.size}px Arial`;
+      ctx.fillStyle = d.color;
+      ctx.shadowColor = d.color;
+      ctx.shadowBlur = 10;
+      ctx.fillText(TEXT, d.px, d.py);
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  function loop() {
+    drawSpace();
+
+    if (started) drawHeart();
+
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+
+  // ================= MUSIC =================
+
+  // إذا تبين تستخدمين أغنية MP3:
+  // ضعي ملف الأغنية بجانب index.html واكتبي اسمه هنا.
+  // اتركيه فارغًا لتشغيل الموسيقى الإلكترونية الموجودة في الكود.
+
+  const MUSIC_FILE = "";
+
+  let curStyle = "lullaby";
+  let actx = null;
+  let master = null;
+  let fileAudio = null;
+
+  let musicPlaying = false;
+  let nextTime = 0;
+  let barStep = 0;
+  let timer = null;
+
+  const mtof = n => 440 * Math.pow(2, (n - 69) / 12);
+
+  function tone(freq, t, dur, vol, type) {
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+
+    o.type = type;
+    o.frequency.value = freq;
+
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    o.connect(g);
+    g.connect(master);
+
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+
+  function pad(freq, t, dur, vol) {
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+
+    o.type = "sine";
+    o.frequency.value = freq;
+
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + dur * 0.3);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+
+    o.connect(g);
+    g.connect(master);
+
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+
+  function bell(f, t, vol) {
+    tone(f, t, 3.2, vol, "sine");
+    tone(f * 2.76, t, 1.6, vol * 0.25, "sine");
+  }
+
+  function piano(f, t, dur, vol) {
+    tone(f, t, dur, vol, "sine");
+    tone(f * 2, t, dur * 0.6, vol * 0.35, "sine");
+    tone(f * 3, t, dur * 0.35, vol * 0.12, "sine");
+  }
+
+  // Dreamy music style
+
+  function dreamy(o) {
+    return {
+      bpm: o.bpm,
+      beats: 4,
+
+      play(i, t, B) {
+        const k = i % o.chords.length;
+        const c = o.chords[k];
+
+        c.forEach(n => {
+          pad(mtof(n), t, B * 5, o.pad);
+          pad(mtof(n) * 1.004, t, B * 5, o.pad * 0.75);
+        });
+
+        pad(mtof(c[0] - 12), t, B * 5, o.pad * 1.25);
+
+        if (o.bells) {
+          o.bells[k].forEach((n, b) => {
+            if (n) {
+              bell(
+                mtof(n),
+                t + b * B * (o.bellStep || 1),
+                o.bell
+              );
+            }
+          });
+        }
+
+        if (o.lead) {
+          o.lead[k].forEach(([n, b, d]) => {
+            pad(mtof(n), t + b * B, d * B, o.leadVol);
+          });
+        }
+
+        if (o.arp) {
+          o.arp.forEach((idx, b) => {
+            tone(
+              mtof(c[idx] + 12),
+              t + b * B * 0.5,
+              2.2,
+              o.arpVol,
+              "sine"
+            );
+          });
+        }
+      }
+    };
+  }
+
+  const STYLES = {
+    lullaby: dreamy({
+      bpm: 56,
+      pad: 0.03,
+      arpVol: 0.045,
+
+      chords: [
+        [48, 52, 55, 59],
+        [41, 45, 48, 52],
+        [45, 48, 52, 55],
+        [43, 47, 50, 53]
+      ],
+
+      arp: [0, 1, 2, 3, 2, 1, 2, 3]
+    })
+  };
+
+  function scheduler() {
+    if (!actx || actx.state !== "running") return;
+
+    const S = STYLES[curStyle];
+    const B = 60 / S.bpm;
+
+    while (nextTime < actx.currentTime + 0.6) {
+      S.play(barStep, nextTime, B);
+      nextTime += S.beats * B;
+      barStep++;
+    }
+  }
+
+  async function startMusic() {
+    if (musicPlaying) return;
+
+    // تشغيل ملف MP3 إذا تمت إضافة اسمه
+    if (MUSIC_FILE) {
+      if (!fileAudio) {
+        fileAudio = new Audio(MUSIC_FILE);
+        fileAudio.loop = true;
+        fileAudio.volume = 0.7;
+      }
+
+      try {
+        await fileAudio.play();
+        musicPlaying = true;
+      } catch (err) {
+        console.error("Music playback error:", err);
+        musicPlaying = false;
+      }
+
+      updateMuteButton();
+      return;
+    }
+
+    const AC = window.AudioContext || window.webkitAudioContext;
+
+    if (!AC) {
+      console.error("Web Audio API is not supported.");
+      return;
+    }
+
+    if (!actx) {
+      actx = new AC();
+
+      master = actx.createGain();
+
+      master.gain.setValueAtTime(0.0001, actx.currentTime);
+      master.gain.linearRampToValueAtTime(
+        0.8,
+        actx.currentTime + 3
+      );
+
+      const delay = actx.createDelay(1.0);
+      const fb = actx.createGain();
+      const wet = actx.createGain();
+
+      delay.delayTime.value = 0.38;
+      fb.gain.value = 0.35;
+      wet.gain.value = 0.35;
+
+      master.connect(actx.destination);
+      master.connect(delay);
+      delay.connect(fb);
+      fb.connect(delay);
+      delay.connect(wet);
+      wet.connect(actx.destination);
+    }
+
+    try {
+      await actx.resume();
+
+      barStep = 0;
+      nextTime = actx.currentTime + 0.2;
+
+      scheduler();
+
+      if (!timer) {
+        timer = setInterval(scheduler, 200);
+      }
+
+      musicPlaying = true;
+
+    } catch (err) {
+      console.error("Music playback error:", err);
+      musicPlaying = false;
+    }
+
+    updateMuteButton();
+  }
+
+  function updateMuteButton() {
+    const btn = document.getElementById("mute");
+
+    btn.textContent = musicPlaying ? "♪" : "✕";
+
+    btn.setAttribute(
+      "aria-label",
+      musicPlaying ? "Mute music" : "Play music"
+    );
+  }
+
+  async function toggleMusic() {
+    if (MUSIC_FILE) {
+      if (!fileAudio) {
+        await startMusic();
+        return;
+      }
+
+      if (musicPlaying) {
+        fileAudio.pause();
+        musicPlaying = false;
+      } else {
+        try {
+          await fileAudio.play();
+          musicPlaying = true;
+        } catch (err) {
+          console.error("Music playback error:", err);
+        }
+      }
+
+    } else if (actx) {
+      if (musicPlaying) {
+        await actx.suspend();
+        musicPlaying = false;
+      } else {
+        await actx.resume();
+        musicPlaying = true;
+      }
+
+    } else {
+      await startMusic();
+      return;
+    }
+
+    updateMuteButton();
+  }
+
+  document.getElementById("mute").addEventListener(
+    "click",
+    toggleMusic
+  );
+
+  // Start everything when the heart is clicked
+
+  document.getElementById("btn").addEventListener("click", async () => {
+    document.getElementById("center").classList.add("hide");
+
+    started = true;
+
+    hc.classList.add("show");
+
+    document.getElementById("controls").classList.add("show");
+
+    await startMusic();
   });
+
 </script>
 </body>
 </html>
